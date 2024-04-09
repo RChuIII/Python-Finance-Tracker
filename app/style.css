@@ -1,0 +1,24 @@
+/* Logo */
+[data-testid="stSidebar"] {
+                background-image: url(https://streamlit.io/images/brand/streamlit-logo-secondary-colormark-darktext.png);
+                background-size: 200px;
+                background-repeat: no-repeat;
+                background-position: 4px 20px;
+            }
+
+/* Card */
+div.st-emotion-cache-1r6slb0.e1f1d6gn3 {
+    /* background-color: #ffffff; */
+    /* border: 10px solid rgb(128, 128, 128); */
+    padding: 5% 5% 5% 10%;
+    border-radius: 5px;
+    
+    border-left: 0.99rem solid #9AD8E1 !important;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(128, 128, 128, 0.5) !important;   
+}
+
+label.st-emotion-cache-mkogse.e16fv1kl2 {
+    color: #36b9cc !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+}
