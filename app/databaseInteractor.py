@@ -7,7 +7,15 @@ import sqlite3
 from datetime import datetime
 import io
 import shutil
-import os
+
+__author__ = "Romy I. Chu III"
+__copyright__ = "Copyright 2024, Finance Tracker RChuIII"
+__credits__ = ["Romy I. Chu III"]
+__license__ = "GPL V3"
+__version__ = "1.2.0"
+__maintainer__ = "Romy I. Chu III"
+__email__ = "romyiii.ia.c@gmail.com"
+__status__ = "Development"
 
 class CashFlowDBInterface():
     # Global variables
@@ -20,55 +28,8 @@ class CashFlowDBInterface():
         global database,cursor
         database = sqlite3.connect(dbfile) # connect to the database
         cursor = database.cursor()
-        self.create_database()
         pass
-    
-    def create_database(self):
-        global cursor
-        try:
-            with open('makedb.dump', 'r') as file:
-                data = file.readlines()
-            cursor.execute("""
-            CREATE TABLE "Accounts" (
-                "ID" INTEGER NOT NULL CONSTRAINT "RC_Accounts" PRIMARY KEY AUTOINCREMENT,
-                "Name" TEXT NULL,
-                "Description" TEXT NULL
-            );""")
-            
-            cursor.execute("""
-                CREATE TABLE "CashFlow" (
-                "ID" INTEGER NOT NULL CONSTRAINT "PK_Expenses" PRIMARY KEY AUTOINCREMENT,
-                "Date" TEXT NOT NULL,
-                "CategoryID" INTEGER NULL,
-                "TypeID" INTEGER NULL,
-                "Value" REAL NOT NULL,
-                "AccountID" INTEGER NULL,
-                "Comments" TEXT,
-                CONSTRAINT "Categories_CategoryId" FOREIGN KEY ("CategoryID") REFERENCES "Categories" ("ID") ON DELETE RESTRICT,
-                CONSTRAINT "Types_TypeId" FOREIGN KEY ("TypeID") REFERENCES "Types" ("ID") ON DELETE RESTRICT,
-                CONSTRAINT "Accounts_AccountID" FOREIGN KEY ("AccountID") REFERENCES "Accounts" ("ID") ON DELETE RESTRICT
-            );""")
-            
-            cursor.execute("""
-                CREATE TABLE "Types" (
-                "ID" INTEGER NOT NULL CONSTRAINT "RC_Types" PRIMARY KEY AUTOINCREMENT,
-                "Name" TEXT NULL,
-                "Description" TEXT NULL
-            );""")
-            
-            cursor.execute("""
-            CREATE TABLE "Categories" (
-                "ID" INTEGER NOT NULL CONSTRAINT "RC_Categories" PRIMARY KEY AUTOINCREMENT,
-                "Name" TEXT NULL,
-                "Description" TEXT NULL,
-                "Budget" REAL NOT NULL
-            );""")
-            
-            for line in data:
-                cursor.execute(line)
-        except:
-            pass
-        
+
     def insert_value(self,
                      Date: str,
                      CategoryID: int,
@@ -129,7 +90,7 @@ class CashFlowDBInterface():
         with io.open(f"CashFlowDB_{now}.dump", "w") as f:
             for line in database.iterdump():
                 f.write('%s\n' % line)
-        shutil.copy(f"CashFlow-v2.db", f"CashFlowDB_{now}.db")
+        shutil.copy("CashFlow-v2.db", f"CashFlowDB_{now}.db")
         shutil.move(f"CashFlowDB_{now}.dump", f"{backup_dir}/")
         shutil.move(f"CashFlowDB_{now}.db", f"{backup_dir}/")
         pass
@@ -138,7 +99,9 @@ class CashFlowDBInterface():
         "Account 0":0,
         "Account 1":1,
         "Account 2":2,
-        "Account 3":3
+        "Account 3":3,
+        "Account 4":4,
+        "Account 5":5
     }
     categoryIDs ={
         "General Expenses":0,
@@ -151,7 +114,9 @@ class CashFlowDBInterface():
         "Investing":7,
         "Subscriptions":8,
         "Income":9,
-        "Other":10
+        "Other":10,
+        "Other bills":11,
+        "Eating Out":12
     }
     typesIDs = {
         "Credit Card":0,
@@ -161,15 +126,5 @@ class CashFlowDBInterface():
         "Paypal":4,
         "E-Transfer":5,
         "Bank-to-Bank":6,
-        "ETC":7,
+        "ETC":7
     }
-
-
-def batch_insert(app):
-    first = True
-    for n in insertValues:
-        app.insert_value(n[0],n[1],n[2],n[3],n[4],n[5])
-        pass
-    for i in app.query("SELECT * FROM CashFlow")[0].fetchall():
-        print(i)
-    pass

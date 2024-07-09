@@ -3,12 +3,26 @@
     This file is not intended to be used directly.
 """
 import csv
-import sqlite3
 from datetime import datetime
-import pandas as pd
+
+__author__ = "Romy I. Chu III"
+__copyright__ = "Copyright 2024, Finance Tracker RChuIII"
+__credits__ = ["Romy I. Chu III"]
+__license__ = "GPL V3"
+__version__ = "1.2.0"
+__maintainer__ = "Romy I. Chu III"
+__email__ = "romyiii.ia.c@gmail.com"
+__status__ = "Development"
 
 class DataProcessor:
     def __init__(self):
+        pass
+    
+    def __valid_day__(self, date:str, date_range: tuple) -> bool:
+        cur_date = datetime.strptime(date, '%Y-%m-%d').date()
+        start_date = date_range[0]
+        end_date = date_range[1]
+        return cur_date >= start_date and cur_date <= end_date
         pass
     
     # A function that creates a csv file from a list of ordered tuples
@@ -44,20 +58,31 @@ class DataProcessor:
             tuple: A tuple containing income, expenses, and the difference between income and expenses.
         """
         _DATE, _CATEGORY, _TYPE, _VALUE, _ACCOUNT = 0,1,2,3,4
-        transactions = []
-        income, expenses = 0, 0
-        for row in data:
-            if row[_CATEGORY] != 7:
-                if row[_ACCOUNT] in [0,1,3]:
-                    transactions.append(row[_VALUE])
-
-        for transaction in transactions:
-            if transaction > 0:
-                income += transaction
-            else:
-                expenses += transaction
-        return (round(income,2), round(-expenses,2), round(income + expenses,2))
+        accountsPos = [0,0,0,0,0]
+        accountsNeg = [0,0,0,0,0]
+        sum_of_accounts = 0
+        for point in data:
+            if point[_TYPE] != 8:
+                if point[_VALUE] > 0:
+                    accountsPos[point[_ACCOUNT]] += point[_VALUE]
+                else:
+                    accountsNeg[point[_ACCOUNT]] += point[_VALUE]
+            sum_of_accounts += point[_VALUE]
+            pass
+        
+        return (round(sum(accountsPos),2), round(-sum(accountsNeg),2), round(sum_of_accounts,2))
         pass
+
+    def check_account_balances(app):
+        accounts = [0,0,0,0,0,0]
+        data = app.query("SELECT * FROM CashFlow")[0].fetchall()
+        for i in data:
+            accounts[i[5]] += i[4]
+        pass
+        for i in range(len(accounts)):
+            accounts[i] = round(accounts[i],2)
+            
+        print(accounts)
 
     def generate_savings_line_chart_data(self,data: tuple) -> dict:
         _DATE, _CATEGORY, _TYPE, _VALUE, _ACCOUNT = 0,1,2,3,4
@@ -65,9 +90,9 @@ class DataProcessor:
         expenses_dict = {}
         income_dict = {}
         # Get data for each date in the database
-        for row in data:
-            if row[_CATEGORY] != 7:
-                if row[_ACCOUNT] in [0,1,3]:
+        for row in data: # Hella scuffed nested if statements
+            if row[_TYPE] != 8:
+                if row[_ACCOUNT] in [0,2,1,3,4,5]:
                     if savings_dict.get(row[_DATE]) is None:
                         if row[_VALUE] >= 0:
                             income_dict.update({row[_DATE]:row[_VALUE]})
@@ -87,8 +112,11 @@ class DataProcessor:
         for date in dates:
             running_total += savings_dict.get(date)
             savings_dict.update({date:round(running_total,2)})
+
         return {"income": income_dict, "expenses": expenses_dict, "savings": savings_dict}
-    
+
+
+
     def generate_donut_chart_data(self, data: tuple, categories: list) -> tuple:
         _DATE, _CATEGORY, _TYPE, _VALUE, _ACCOUNT = 0,1,2,3,4
         exclude_list = ["Investing", "Income", "Other"]
@@ -111,9 +139,30 @@ class DataProcessor:
                 csv_out.writerow(row)
         return tuple(fixed_categories.values())
 
-    def __valid_day__(self, date:str, date_range: tuple) -> bool:
-        cur_date = datetime.strptime(date, '%Y-%m-%d').date()
-        start_date = date_range[0]
-        end_date = date_range[1]
-        return cur_date >= start_date and cur_date <= end_date
-        pass
+    def generate_account_balances(self, data:tuple) -> tuple:
+        _DATE, _CATEGORY, _TYPE, _VALUE, _ACCOUNT = 0,1,2,3,4
+        accounts = [0,0,0,0,0,0,0,0,0]
+        for i in data:
+            accounts[i[_ACCOUNT]] += i[_VALUE]
+
+        for i in range(len(accounts)):
+            accounts[i] = round(accounts[i], 2)
+        return accounts
+
+    def get_key(self, my_dict, val):
+        for key, value in my_dict.items():
+            if val == value:
+                return key
+        return "key doesn't exist"
+
+    def generate_modded_chart_data(self, data, columnIDs):
+        _DATE, _CATEGORY, _TYPE, _VALUE, _ACCOUNT = 1,2,3,4,5
+        temp=[]
+        for entry in data:
+            tmp_entry = list(entry)
+            tmp_entry[_ACCOUNT] = self.get_key(columnIDs[0], entry[_ACCOUNT])
+            tmp_entry[_CATEGORY] = self.get_key(columnIDs[1], entry[_CATEGORY])
+            tmp_entry[_TYPE] = self.get_key(columnIDs[2], entry[_TYPE])
+            tmp_entry[_VALUE] = "$ " + str(entry[_VALUE])
+            temp.append(tmp_entry)
+        return temp

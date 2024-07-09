@@ -9,35 +9,52 @@ import streamlit as st
 import pandas as pd
 import plost
 
+__author__ = "Romy I. Chu III"
+__copyright__ = "Copyright 2024, Finance Tracker RChuIII"
+__credits__ = ["Romy I. Chu III"]
+__license__ = "GPL V3"
+__version__ = "1.2.0"
+__maintainer__ = "Romy I. Chu III"
+__email__ = "romyiii.ia.c@gmail.com"
+__status__ = "Development"
+
 # Set page config
 st.set_page_config(page_title='📈 Finance Tracker 📈', 
                    layout='wide', 
-                   initial_sidebar_state='expanded')
+                   initial_sidebar_state='expanded',
+                   menu_items={'Get Help': 'https://stackoverflow.com/',
+                               'Report a bug': "https://stackoverflow.com/",
+                               'About': "# This is a header. This is an *extremely* cool app! Don't use the above links, they just go to Stack Overflow."
+    })
 
 # Add CSS
 with open('style.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 # """ SIDE BAR"""
-st.sidebar.header('Finance Tracker `version 1`')
+st.sidebar.header('Finance Tracker `version 1.2.0`')
 st.sidebar.subheader('All Graph Parameters')
 start_date_selector = st.sidebar.date_input('Start date',dt.date(2024, 1, 1))
 end_date_selector = st.sidebar.date_input('End date')
-plot_height = st.sidebar.slider('Specify plot height', 300, 750, 500)
+plot_height = st.sidebar.slider('Specify plot height', 300, 1000, 600)
 
 st.sidebar.subheader('Line chart parameters')
 plot_data = st.sidebar.selectbox('Select data', ['savings','income', 'expenses'])
 
-st.sidebar.markdown('''
----
+st.sidebar.markdown('''---
 Created by [Romy I. Chu III](https://github.com/RChuIII) [(Linkedin)](https://www.linkedin.com/in/romy-chu-iii-42326b2bb/) Powered by [Streamlit](https://www.streamlit.io).
 ''')
 
-database = di.CashFlowDBInterface("CashFlow-v2.db")
-dataProcessor = dp.DataProcessor()
-all_data = database.query("SELECT * FROM CashFlow")[0].fetchall()
-all_data_with_headers = pd.DataFrame(data=all_data, columns=("ID","DATE","CATEGORY","TYPE","VALUE","ACCOUNT","COMMENTS"))
-categories = database.query("SELECT * FROM Categories")[0].fetchall()
+database = di.CashFlowDBInterface("CashFlow-v2.db") # connect to the database
+dataProcessor = dp.DataProcessor()  # create an instance of the DataProcessor class
+all_data = database.query("SELECT * FROM CashFlow")[0].fetchall() # get all data from the database
+
+all_data_with_headers = pd.DataFrame(data=all_data, columns=("ID","DATE","CATEGORY","TYPE","VALUE","ACCOUNT","COMMENTS")) # create a dataframe from the data
+# Modified version of the chart data with readable column/value names
+chart_data_modded = dataProcessor.generate_modded_chart_data(data=all_data, columnIDs=(database.accountIDs,database.categoryIDs,database.typesIDs))
+all_chart_data_modded = pd.DataFrame(data=chart_data_modded, columns=("ID","DATE","CATEGORY","TYPE","VALUE","ACCOUNT","COMMENTS"))
+categories = database.query("SELECT * FROM Categories")[0].fetchall() # get all categories from the database
+# create a csv file with the processed data
 processedData = dataProcessor.create_csv_from_tuples(data=all_data, filename="data.csv", headers=("DATE","CATEGORY","TYPE","VALUE","ACCOUNT") ,date_requirements=(start_date_selector, end_date_selector))
 
 # Get data for metrics
@@ -46,14 +63,24 @@ data_income = "$" + str(cfData[0])
 data_expenses = "$" + str(cfData[1])
 data_savings = "$" + str(cfData[2])
 
+# Get account balances
+balances = dataProcessor.generate_account_balances(data=processedData)
+balAcc0 = "$" + str(balances[0])
+balAcc1 = "$" + str(balances[1])
+balAcc2 = "$" + str(balances[2])
+balAcc3 = "$" + str(balances[3])
+balAcc4 = "$" + str(balances[4])
+balAcc5 = "$" + str(balances[5])
+
 # Data for line chart
 line_chart_data = dataProcessor.generate_savings_line_chart_data(data=processedData, )
+
+# Data for heatmap
+heatmap_data = pd.read_csv('data.csv', parse_dates=['DATE'])
 
 # Data for donut chart
 donutData = dataProcessor.generate_donut_chart_data(data=processedData, categories=categories)
 spending = pd.read_csv('donutData.csv')
-
-
 
 # Row A: Metrics
 st.markdown('### Metrics')
@@ -62,13 +89,21 @@ col1.metric("📈 Income 📈", f"{data_income}")
 col2.metric("📉 Expenses 📉", f"{data_expenses}")
 col3.metric("💰 Savings 💰 + 🗠 Investments 🗠", f"{data_savings}")
 
+# Row B: Account Balances
+st.markdown('### Account Balances')
+acc0, acc1, acc2, acc3, acc4, acc5 = st.columns(6)
+acc0.metric("Account #0", f"{balAcc0}")
+acc1.metric("Account #1", f"{balAcc1}")
+acc2.metric("Account #2", f"{balAcc2}")
+acc3.metric("Account #3", f"{balAcc3}")
+acc4.metric("Account #4", f"{balAcc4}")
+acc5.metric("Account #5", f"{balAcc5}")
 
-# Row B: Line chart
+# Row C: Line chart
 st.markdown('### Cash Flow Line Chart')
 st.line_chart(line_chart_data.get(plot_data), height = plot_height)
 
-
-# Row C: Donut chart
+# Row D: Docut Chart
 st.markdown('### Spending by Category')
 plost.donut_chart(
     data=spending,
@@ -78,8 +113,7 @@ plost.donut_chart(
     use_container_width=True)
 
 # Showing raw all data
-st.dataframe(data=all_data_with_headers,use_container_width=True, height=750, hide_index=True)
-data_col1, data_col2 = st.columns(2)
+st.dataframe(data=all_chart_data_modded,use_container_width=True, height=750, hide_index=True)
 
 # Input form
 with st.form("input_form", clear_on_submit=True):
