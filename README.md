@@ -17,7 +17,7 @@ streamlit run pyFinanceTrackerWebapp.py
 or using docker:
 ```bash
 docker build -t pynance-tracker .;
-docker run -d -p 6900:6900 pynance-tracker
+docker run -dt -v /path/to/app/:/app -p 6900:6900 --name pynance-tracker pynance-tracker
 ```
 
 Access the webapp on:
